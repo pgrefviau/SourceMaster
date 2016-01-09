@@ -19,9 +19,9 @@ namespace SourceMaster.Syntax
 		private readonly SemanticInterpreter _semanticInterpreter;
 
 		private static readonly IContextualProperty<bool> _isLeadingTrivia = new ContextualProperty<bool>(true);
-		private static readonly IContextualProperty<CompositeSyntaxElement> _currentSyntaxElement = new ContextualProperty<CompositeSyntaxElement>();
-		
-		public List<CompositeSyntaxElement> Elements { get; } = new List<CompositeSyntaxElement>();
+		private static readonly IContextualProperty<SyntaxElementWithTrivia> _currentSyntaxElement = new ContextualProperty<SyntaxElementWithTrivia>();
+
+		public SyntaxElementsGroupingAccumulator ResultsAccumulator { get; } = new SyntaxElementsGroupingAccumulator();
 
 		public FileSyntaxWalker(SemanticInterpreter semanticInterpreter)
 			: base(SyntaxWalkerDepth.StructuredTrivia)
@@ -31,14 +31,14 @@ namespace SourceMaster.Syntax
 
 		public override void VisitToken(SyntaxToken token)
 		{
-			CompositeSyntaxElement element;
+			SyntaxElementWithTrivia element;
 
 			if (token.IsKeyword() || token.IsContextualKeyword())
 			{
 				// Keyword
 				element = token.IsKind(SyntaxKind.PartialKeyword) 
 					? ProcessPartialKeyword(token)
-					: new CompositeSyntaxElement(SyntaxElementKind.Keyword, token);
+					: new SyntaxElementWithTrivia(token, SyntaxElementKind.Keyword);
 			}
 			else if (token.IsKind(SyntaxKind.IdentifierToken))
 			{
@@ -49,12 +49,12 @@ namespace SourceMaster.Syntax
 			else if (IsStringLitteralToken(token))
 			{
 				// String litteral
-				element = new CompositeSyntaxElement(SyntaxElementKind.StringLitteral, token);
+				element = new SyntaxElementWithTrivia(token, SyntaxElementKind.StringLitteral);
 			}
 			else
 			{
 				// Litteral
-				element = new CompositeSyntaxElement(SyntaxElementKind.Litteral, token);
+				element = new SyntaxElementWithTrivia(token, SyntaxElementKind.Litteral);
 			}
 
 			using (_currentSyntaxElement.PostValue(element))
@@ -63,7 +63,7 @@ namespace SourceMaster.Syntax
 				VisitTrailingTrivia(token);
 			}
 
-			Elements.Add(element);
+			ResultsAccumulator.Add(element);
 		}
 
 		private bool IsStringLitteralToken(SyntaxToken token)
@@ -78,22 +78,22 @@ namespace SourceMaster.Syntax
 			return false;
 		}
 
-
-		private CompositeSyntaxElement ProcessPartialKeyword(SyntaxToken partialKeywordToken)
+		private SyntaxElementWithTrivia ProcessPartialKeyword(SyntaxToken partialKeywordToken)
 		{
-			return new CompositeSyntaxElement(SyntaxElementKind.Keyword, partialKeywordToken);
+			// TODO: Special case handling
+			return new SyntaxElementWithTrivia(partialKeywordToken, SyntaxElementKind.Keyword);
 		}
 
-		private CompositeSyntaxElement ProcessSemanticSymbolIdentifier(SyntaxToken identifierToken)
+		private SyntaxElementWithTrivia ProcessSemanticSymbolIdentifier(SyntaxToken identifierToken)
 		{
 			SymbolMetadata symbolMetadata;
 			var parentSyntax = identifierToken.Parent;
-			var isValidSymbol = _semanticInterpreter.EnsureSymbolMapping(parentSyntax, out symbolMetadata);
+			var isValidSourceSymbol = _semanticInterpreter.TryEnsuringSymbolMapping(parentSyntax, out symbolMetadata);
 
-			return isValidSymbol 
-				? new SymbolSyntaxElement(symbolMetadata.Id, SyntaxElementKind.Identifier, identifierToken) 
-				: new CompositeSyntaxElement(SyntaxElementKind.Litteral, identifierToken);
-		} 
+			return isValidSourceSymbol 
+				? new SymbolSyntaxElement(identifierToken, symbolMetadata.Id) 
+				: new SyntaxElementWithTrivia(identifierToken, SyntaxElementKind.Litteral);
+		}
 
 		public override void VisitLeadingTrivia(SyntaxToken token)
 		{
@@ -115,19 +115,20 @@ namespace SourceMaster.Syntax
 		{
 			var currentElement = _currentSyntaxElement.Value;
 			var isLeadingTrivia = _isLeadingTrivia.Value;
+			var triviaText = trivia.ToString();
+
 			var targetedElements = isLeadingTrivia
 				? currentElement.LeadingElements
 				: currentElement.TrailingElements;
 
 			switch (trivia.Kind())
 			{
-				case SyntaxKind.WhitespaceTrivia:
-					ProcessWhitespaceTrivia(trivia, targetedElements, isLeadingTrivia);
-					break;
 				case SyntaxKind.EndOfLineTrivia:
-					ProcessEndOfLineTrivia(trivia, targetedElements);
+				case SyntaxKind.WhitespaceTrivia:
+					targetedElements.Add(new TriviaSyntaxElement(triviaText, TriviaSyntaxElementKind.Whitespace));
 					break;
 				case SyntaxKind.SingleLineCommentTrivia:
+					// TODO: Add handling for other comments types
 					ProcessCommentTrivia(trivia, targetedElements, isSingleLine: true);
 					break;
 			}
@@ -135,33 +136,15 @@ namespace SourceMaster.Syntax
 			base.VisitTrivia(trivia);
 		}
 
-		private void ProcessWhitespaceTrivia(SyntaxTrivia trivia, List<CompositeSyntaxElement> targetedElements, bool isLeadingTrivia)
+		private void ProcessCommentTrivia(SyntaxTrivia trivia, List<TriviaSyntaxElement> targetedElements, bool isSingleLine)
 		{
-			var indentation = trivia.Span.End - trivia.Span.Start;
-			var whitespaceCharacterCount = isLeadingTrivia 
-				? indentation * WhitespaceCharacterPerLeadingIndentation 
-				: indentation;
-
-			targetedElements.Add(new CompositeSyntaxElement(SyntaxElementKind.Litteral, new string(' ', whitespaceCharacterCount)));
+			targetedElements.Add(new CommentTriviaSyntaxElement(trivia.ToString()));
 		}
 
-		private void ProcessEndOfLineTrivia(SyntaxTrivia trivia, List<CompositeSyntaxElement> targetedElements)
-		{
-			targetedElements.Add(new CompositeSyntaxElement(SyntaxElementKind.Litteral, trivia.ToString()));
-		}
-
-		private void ProcessCommentTrivia(SyntaxTrivia trivia, List<CompositeSyntaxElement> targetedElements, bool isSingleLine)
-		{
-			targetedElements.Add(new CompositeSyntaxElement(SyntaxElementKind.Comment, trivia.ToString()));
-		}
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="node"></param>
 		public override void VisitDocumentationCommentTrivia(DocumentationCommentTriviaSyntax node)
 		{
-			base.VisitDocumentationCommentTrivia(node);
+			return;
+			//base.VisitDocumentationCommentTrivia(node);
 		}
 	}
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,24 +12,23 @@ namespace SourceMaster.Semantic
 {
 	public class SemanticInterpreter
 	{
-		private readonly Dictionary<ISymbol, string> _symbolToAssignedId = new Dictionary<ISymbol, string>();
-		private readonly Dictionary<string, SymbolMetadata> _symbolIdToMetadata = new Dictionary<string, SymbolMetadata>();
+		private static readonly Dictionary<ISymbol, string> _symbolToAssignedId = new Dictionary<ISymbol, string>();
+		private static readonly Dictionary<string, SymbolMetadata> _symbolIdToMetadata = new Dictionary<string, SymbolMetadata>();
 		private readonly HashSet<ISymbol> _encounteredSymbolsNotInSource = new HashSet<ISymbol>();
 
+		public Project CurrentProject { get; }
 
-		public Solution Solution { get; }
 		private SemanticModel Model { get; }
 
-
-		public SemanticInterpreter(Solution solution, SemanticModel model)
+		public SemanticInterpreter(Project project, SemanticModel model)
 		{
-			Solution = solution;
+			CurrentProject = project;
 			Model = model;
 		}
 
 		public SymbolMetadata this[string symbolId] => _symbolIdToMetadata[symbolId];
 
-		private bool TryGetSymbolMetadata(ISymbol symbol, out SymbolMetadata metadata)
+		private bool TryGettingSymbolMetadata(ISymbol symbol, out SymbolMetadata metadata)
 		{
 			metadata = null;
 			string symbolId;
@@ -42,54 +42,95 @@ namespace SourceMaster.Semantic
 			return true;
 		}
 
-		public bool EnsureSymbolMapping(SyntaxNode syntax, out SymbolMetadata associatedSymbolMetadata)
+		public bool TryEnsuringSymbolMapping(SyntaxNode syntax, out SymbolMetadata associatedSymbolMetadata)
 		{
-			var identifierSymbol = Model.GetSymbolInfo(syntax).Symbol ?? Model.GetDeclaredSymbol(syntax);
 			associatedSymbolMetadata = null;
 
+			var identifierSymbol = Model.GetSymbolInfo(syntax).Symbol ?? Model.GetDeclaredSymbol(syntax);
 			if (identifierSymbol is INamespaceSymbol || _encounteredSymbolsNotInSource.Contains(identifierSymbol))
 			{
 				return false;
 			}
 
-			if (TryGetSymbolMetadata(identifierSymbol, out associatedSymbolMetadata))
+			if (TryGettingSymbolMetadata(identifierSymbol, out associatedSymbolMetadata))
 			{
 				return true;
 			}
 
-			// TODO: Check if symbol is defined in source before adding. Otherwise, treat as litteral
-			//if (associatedSymbolMetadata.)
-			//{
-				// _encounteredSymbolsNotInSource.Add()
-				// return false;
-			//}
+			var declaredInSource = TryGeneratingSymbolMetadata(identifierSymbol, syntax, out associatedSymbolMetadata);
+			if (!declaredInSource)
+			{
+				_encounteredSymbolsNotInSource.Add(identifierSymbol);
+				 return false;
+			}
 
-			var assignedSymbolId = Guid.NewGuid().ToString("N");
-
-			_symbolToAssignedId[identifierSymbol] = assignedSymbolId;
-
-			associatedSymbolMetadata = GetSymbolMetadata(identifierSymbol, syntax, assignedSymbolId);
-			_symbolIdToMetadata[assignedSymbolId] = associatedSymbolMetadata;
+			_symbolToAssignedId[identifierSymbol] = associatedSymbolMetadata.Id;
+			_symbolIdToMetadata[associatedSymbolMetadata.Id] = associatedSymbolMetadata;
 
 			return true;
 		}
 
-		private SymbolMetadata GetSymbolMetadata(ISymbol symbol, SyntaxNode syntax, string id)
+		private bool TryGeneratingSymbolMetadata(ISymbol symbol, SyntaxNode syntax, out SymbolMetadata generatedSymbolMetadata)
 		{
-			var declarations = symbol
-				.DeclaringSyntaxReferences
-				.Select(@ref => @ref.GetSyntax())
+			generatedSymbolMetadata = null;
+
+			var filePathsOfSourceDeclarations = symbol
+				.Locations
+				.Where(location => location.IsInSource)
+				.Select(location =>  location.GetLineSpan().Path)
+				.Select(path => GetRelativePathToProjectFile(path))
 				.ToArray();
 
-			if (declarations.Length == 1)
+			if (!filePathsOfSourceDeclarations.Any())
 			{
+				return false;
 			}
 
-			var references = SymbolFinder.FindReferencesAsync(symbol, Solution)
-				.Result.
-				ToArray();
-			
-			return new SymbolMetadata(id);
+			var assignedSymbolId = Guid.NewGuid().ToString("N");
+
+			generatedSymbolMetadata = new SymbolMetadata(
+				assignedSymbolId,
+				symbol.MetadataName,
+				filePathsOfSourceDeclarations);
+
+			return true;
+		}
+
+		private string GetRelativePathToProjectFile(string absoluteFilePath)
+		{
+			var projectDirectoryPath = Path.GetDirectoryName(CurrentProject.FilePath);
+
+			return MakeRelativePath(projectDirectoryPath, absoluteFilePath);
+		}
+
+		/// <summary>
+		/// Creates a relative path from one file or folder to another.
+		/// </summary>
+		/// <param name="fromPath">Contains the directory that defines the start of the relative path.</param>
+		/// <param name="toPath">Contains the path that defines the endpoint of the relative path.</param>
+		/// <returns>The relative path from the start directory to the end path or <c>toPath</c> if the paths are not related.</returns>
+		/// <exception cref="ArgumentNullException"></exception>
+		/// <exception cref="UriFormatException"></exception>
+		/// <exception cref="InvalidOperationException"></exception>
+		public static String MakeRelativePath(String fromPath, String toPath)
+		{
+			if (String.IsNullOrEmpty(fromPath)) throw new ArgumentNullException("fromPath");
+			if (String.IsNullOrEmpty(toPath)) throw new ArgumentNullException("toPath");
+
+			Uri fromUri = new Uri(fromPath);
+			Uri toUri = new Uri(toPath);
+
+			if (fromUri.Scheme != toUri.Scheme) { return toPath; } // path can't be made relative.
+
+			Uri relativeUri = fromUri.MakeRelativeUri(toUri);
+			String relativePath = Uri.UnescapeDataString(relativeUri.ToString());
+
+			if (toUri.Scheme.ToUpperInvariant() == "FILE")
+			{
+				relativePath = relativePath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+			}
+
+			return relativePath;
 		}
 	}
 }

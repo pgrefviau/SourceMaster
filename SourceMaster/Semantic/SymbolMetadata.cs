@@ -9,13 +9,22 @@ namespace SourceMaster.Semantic
 {
 	public class SymbolMetadata
 	{
-		public SymbolMetadata(string id)
+		public SymbolMetadata(string id, string fullName, string[] filePathsOfDeclarations)
 		{
 			Id = id;
+			FullName = fullName;
+			DeclarationFilesPaths = filePathsOfDeclarations;
 		}
 
 		public string Id { get; }
+		public string FullName { get; }
+		public string[] DeclarationFilesPaths { get; }
 
 		public bool IsAvailableInSource { get; }
+
+		public override string ToString()
+		{
+			return FullName;
+		}
 	}
 }

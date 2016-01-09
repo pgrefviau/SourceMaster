@@ -39,15 +39,13 @@ namespace SourceMaster
 
 		private static Solution GetSolution(string solutionPath)
 		{
-			// start Roslyn workspace
 			var workspace = MSBuildWorkspace.Create();
-			
-			// open solution we want to analyze
-			var solutionToAnalyze = workspace
+
+			var solution = workspace
 				.OpenSolutionAsync(solutionPath)
 				.Result;
 
-			return solutionToAnalyze;
+			return solution;
 		}
 
 		private static void ParseProjectSourceFiles(Project targetProject)
@@ -59,24 +57,19 @@ namespace SourceMaster
 				{
 					var root = tree.GetCompilationUnitRoot();
 					var model = document.GetSemanticModelAsync().Result;
-					var semanticInterpreter = new SemanticInterpreter(targetProject.Solution, model);
+					var semanticInterpreter = new SemanticInterpreter(targetProject, model);
 
-					ParseFileSyntax(root, semanticInterpreter);
+					ParseFile(root, semanticInterpreter);
 				}
 			}
 		}
 
-		private static List<CompositeSyntaxElement> ParseFileSyntax(CompilationUnitSyntax root, SemanticInterpreter semanticInterpreter)
+		private static SyntaxElement[] ParseFile(CompilationUnitSyntax root, SemanticInterpreter semanticInterpreter)
 		{
 			var walker = new FileSyntaxWalker(semanticInterpreter);
 			walker.Visit(root);
 
-			return walker.Elements;
-		}
-
-		private static string GetRelativePathFromProjectToDocument(Document document)
-		{
-			return Path.Combine(document.Folders.ToArray());
+			return walker.ResultsAccumulator.GetResults();
 		}
 	}
 }

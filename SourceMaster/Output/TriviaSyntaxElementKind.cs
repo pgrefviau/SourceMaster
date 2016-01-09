@@ -6,12 +6,11 @@ using System.Threading.Tasks;
 
 namespace SourceMaster.Output
 {
-	public enum SyntaxElementKind
+	public enum TriviaSyntaxElementKind
 	{
-		Keyword,
-		Litteral,
-		Identifier,
-		Trivia,
-		StringLitteral
+		Whitespace,
+		Directive,
+		Comment,
+		DisabledText
 	}
 }

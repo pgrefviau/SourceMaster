@@ -8,16 +8,17 @@ using SourceMaster.Output;
 
 namespace SourceMaster.Syntax
 {
-	public class SymbolSyntaxElement : CompositeSyntaxElement
+	public class SymbolSyntaxElement : SyntaxElementWithTrivia
 	{
-		public SymbolSyntaxElement(string trackingId, SyntaxElementKind kind, SyntaxToken token)
-			: base(kind, token)
+		// TODO: Extract as extension method
+		public SymbolSyntaxElement(SyntaxToken token, string trackingId)
+			: base(token, SyntaxElementKind.Identifier)
 		{
 			TrackingId = trackingId;
 		}
 
-		public SymbolSyntaxElement(string trackingId, SyntaxElementKind kind, string text) 
-			: base(kind, text)
+		public SymbolSyntaxElement(string text, string trackingId) 
+			: base(text, SyntaxElementKind.Identifier)
 		{
 			TrackingId = trackingId;
 		}

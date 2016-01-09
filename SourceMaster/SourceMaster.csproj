@@ -112,16 +112,20 @@
     <Compile Include="Context\IContextualProperty.cs" />
     <Compile Include="Context\ContextualChange.cs" />
     <Compile Include="Context\ContextualProperty.cs" />
-    <Compile Include="Output\SymbolLocation.cs" />
+    <Compile Include="Extensions\IEnumerableExtensions.cs" />
     <Compile Include="Output\SyntaxElementKind.cs" />
+    <Compile Include="Output\TriviaSyntaxElementKind.cs" />
     <Compile Include="Semantic\SymbolMetadata.cs" />
     <Compile Include="Semantic\SemanticInterpreter.cs" />
     <Compile Include="SourceParsingManager.cs" />
+    <Compile Include="Syntax\CommentTriviaSyntaxElement.cs" />
     <Compile Include="Syntax\FileSyntaxWalker.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Syntax\GroupedSyntaxElement.cs" />
+    <Compile Include="Syntax\SyntaxElement.cs" />
     <Compile Include="Syntax\SymbolSyntaxElement.cs" />
-    <Compile Include="Syntax\CompositeSyntaxElement.cs" />
+    <Compile Include="Syntax\SyntaxElementsGroupingAccumulator.cs" />
+    <Compile Include="Syntax\SyntaxElementWithTrivia.cs" />
+    <Compile Include="Syntax\TriviaSyntaxElement.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

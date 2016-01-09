@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.CodeAnalysis;
+using SourceMaster.Extensions;
 using SourceMaster.Output;
 
 namespace SourceMaster.Syntax
 {
-	public class GroupedSyntaxElement
+	public class SyntaxElement
 	{
-		public GroupedSyntaxElement(SyntaxElementKind kind, string text)
+		public SyntaxElement(string text, SyntaxElementKind kind)
 		{
 			Kind = kind;
 			Text = text;
@@ -19,9 +19,11 @@ namespace SourceMaster.Syntax
 		public SyntaxElementKind Kind { get; }
 		public string Text { get; }
 
+		public virtual IEnumerable<SyntaxElement> CompositeElements => this.Yield();
+
 		public override string ToString()
 		{
-			return Text;
+			return $"{Kind}: {Text}";
 		}
 	}
 }
