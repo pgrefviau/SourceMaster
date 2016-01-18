@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SourceMaster.Tests", "Sourc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SourceMaster.SampleParsingProject", "SourceMaster.SampleParsingProject\SourceMaster.SampleParsingProject.csproj", "{0DC14E94-5269-4654-B3F3-FD473A8BF6F1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SourceMaster.Web", "SourceMaster.Web\SourceMaster.Web.csproj", "{14E89E1D-E968-4D39-854D-95C0D401B7BD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,6 +32,10 @@ Global
 		{0DC14E94-5269-4654-B3F3-FD473A8BF6F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0DC14E94-5269-4654-B3F3-FD473A8BF6F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0DC14E94-5269-4654-B3F3-FD473A8BF6F1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{14E89E1D-E968-4D39-854D-95C0D401B7BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{14E89E1D-E968-4D39-854D-95C0D401B7BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{14E89E1D-E968-4D39-854D-95C0D401B7BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{14E89E1D-E968-4D39-854D-95C0D401B7BD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

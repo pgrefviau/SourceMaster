@@ -113,11 +113,15 @@
     <Compile Include="Context\ContextualChange.cs" />
     <Compile Include="Context\ContextualProperty.cs" />
     <Compile Include="Extensions\IEnumerableExtensions.cs" />
+    <Compile Include="Extensions\ProjectExtensions.cs" />
+    <Compile Include="Output\SourceFileParsingInfo.cs" />
     <Compile Include="Output\SyntaxElementKind.cs" />
     <Compile Include="Output\TriviaSyntaxElementKind.cs" />
     <Compile Include="Semantic\SymbolMetadata.cs" />
-    <Compile Include="Semantic\SemanticInterpreter.cs" />
+    <Compile Include="Semantic\SemanticCache.cs" />
+    <Compile Include="SourceFileInterpreter.cs" />
     <Compile Include="SourceParsingManager.cs" />
+    <Compile Include="SourceParsingResult.cs" />
     <Compile Include="Syntax\CommentTriviaSyntaxElement.cs" />
     <Compile Include="Syntax\FileSyntaxWalker.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

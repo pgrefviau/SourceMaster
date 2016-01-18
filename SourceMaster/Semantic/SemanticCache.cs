@@ -6,11 +6,12 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
+using SourceMaster.Extensions;
 using SourceMaster.Output;
 
 namespace SourceMaster.Semantic
 {
-	public class SemanticInterpreter
+	public class SemanticCache
 	{
 		private static readonly Dictionary<ISymbol, string> _symbolToAssignedId = new Dictionary<ISymbol, string>();
 		private static readonly Dictionary<string, SymbolMetadata> _symbolIdToMetadata = new Dictionary<string, SymbolMetadata>();
@@ -20,7 +21,7 @@ namespace SourceMaster.Semantic
 
 		private SemanticModel Model { get; }
 
-		public SemanticInterpreter(Project project, SemanticModel model)
+		public SemanticCache(Project project, SemanticModel model)
 		{
 			CurrentProject = project;
 			Model = model;
@@ -28,7 +29,7 @@ namespace SourceMaster.Semantic
 
 		public SymbolMetadata this[string symbolId] => _symbolIdToMetadata[symbolId];
 
-		private bool TryGettingSymbolMetadata(ISymbol symbol, out SymbolMetadata metadata)
+		private static bool TryGettingSymbolMetadata(ISymbol symbol, out SymbolMetadata metadata)
 		{
 			metadata = null;
 			string symbolId;
@@ -47,7 +48,7 @@ namespace SourceMaster.Semantic
 			associatedSymbolMetadata = null;
 
 			var identifierSymbol = Model.GetSymbolInfo(syntax).Symbol ?? Model.GetDeclaredSymbol(syntax);
-			if (identifierSymbol is INamespaceSymbol || _encounteredSymbolsNotInSource.Contains(identifierSymbol))
+			if (identifierSymbol == null || identifierSymbol is INamespaceSymbol || _encounteredSymbolsNotInSource.Contains(identifierSymbol))
 			{
 				return false;
 			}
@@ -78,7 +79,7 @@ namespace SourceMaster.Semantic
 				.Locations
 				.Where(location => location.IsInSource)
 				.Select(location =>  location.GetLineSpan().Path)
-				.Select(path => GetRelativePathToProjectFile(path))
+				.Select(path => CurrentProject.GetRelativePathToFile(path))
 				.ToArray();
 
 			if (!filePathsOfSourceDeclarations.Any())
@@ -91,46 +92,10 @@ namespace SourceMaster.Semantic
 			generatedSymbolMetadata = new SymbolMetadata(
 				assignedSymbolId,
 				symbol.MetadataName,
-				filePathsOfSourceDeclarations);
+				filePathsOfSourceDeclarations,
+				symbol.Kind);
 
 			return true;
-		}
-
-		private string GetRelativePathToProjectFile(string absoluteFilePath)
-		{
-			var projectDirectoryPath = Path.GetDirectoryName(CurrentProject.FilePath);
-
-			return MakeRelativePath(projectDirectoryPath, absoluteFilePath);
-		}
-
-		/// <summary>
-		/// Creates a relative path from one file or folder to another.
-		/// </summary>
-		/// <param name="fromPath">Contains the directory that defines the start of the relative path.</param>
-		/// <param name="toPath">Contains the path that defines the endpoint of the relative path.</param>
-		/// <returns>The relative path from the start directory to the end path or <c>toPath</c> if the paths are not related.</returns>
-		/// <exception cref="ArgumentNullException"></exception>
-		/// <exception cref="UriFormatException"></exception>
-		/// <exception cref="InvalidOperationException"></exception>
-		public static String MakeRelativePath(String fromPath, String toPath)
-		{
-			if (String.IsNullOrEmpty(fromPath)) throw new ArgumentNullException("fromPath");
-			if (String.IsNullOrEmpty(toPath)) throw new ArgumentNullException("toPath");
-
-			Uri fromUri = new Uri(fromPath);
-			Uri toUri = new Uri(toPath);
-
-			if (fromUri.Scheme != toUri.Scheme) { return toPath; } // path can't be made relative.
-
-			Uri relativeUri = fromUri.MakeRelativeUri(toUri);
-			String relativePath = Uri.UnescapeDataString(relativeUri.ToString());
-
-			if (toUri.Scheme.ToUpperInvariant() == "FILE")
-			{
-				relativePath = relativePath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
-			}
-
-			return relativePath;
 		}
 	}
 }

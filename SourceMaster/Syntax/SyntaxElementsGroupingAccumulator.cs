@@ -9,7 +9,6 @@ namespace SourceMaster.Syntax
 {
 	public class SyntaxElementsGroupingAccumulator
 	{
-		//private SyntaxElement _latestEncounteredElement;
 		private readonly StringBuilder _literalGroupingAccumulator = new StringBuilder();
 		private readonly List<SyntaxElement> _elements = new List<SyntaxElement>();
 
@@ -21,7 +20,6 @@ namespace SourceMaster.Syntax
 
 		public void Add(params SyntaxElementWithTrivia[] elements)
 		{
-
 			var compositeElements = elements.SelectMany(elem => elem.CompositeElements);
 
 			foreach (var element in compositeElements)
@@ -40,8 +38,6 @@ namespace SourceMaster.Syntax
 					// Add element
 					_elements.Add(element);
 				}
-
-				//_latestEncounteredElement = element;
 			}	
 		}
 

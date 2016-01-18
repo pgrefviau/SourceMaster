@@ -1,5 +1,4 @@
-﻿#define lololol
-
+﻿
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,17 +15,17 @@ namespace SourceMaster.Syntax
 	{
 		private const int WhitespaceCharacterPerLeadingIndentation = 4;
 
-		private readonly SemanticInterpreter _semanticInterpreter;
+		private readonly SemanticCache _semanticCache;
 
 		private static readonly IContextualProperty<bool> _isLeadingTrivia = new ContextualProperty<bool>(true);
 		private static readonly IContextualProperty<SyntaxElementWithTrivia> _currentSyntaxElement = new ContextualProperty<SyntaxElementWithTrivia>();
 
 		public SyntaxElementsGroupingAccumulator ResultsAccumulator { get; } = new SyntaxElementsGroupingAccumulator();
 
-		public FileSyntaxWalker(SemanticInterpreter semanticInterpreter)
+		public FileSyntaxWalker(SemanticCache semanticCache)
 			: base(SyntaxWalkerDepth.StructuredTrivia)
 		{
-			_semanticInterpreter = semanticInterpreter;
+			_semanticCache = semanticCache;
 		}
 
 		public override void VisitToken(SyntaxToken token)
@@ -88,10 +87,10 @@ namespace SourceMaster.Syntax
 		{
 			SymbolMetadata symbolMetadata;
 			var parentSyntax = identifierToken.Parent;
-			var isValidSourceSymbol = _semanticInterpreter.TryEnsuringSymbolMapping(parentSyntax, out symbolMetadata);
+			var isValidSourceSymbol = _semanticCache.TryEnsuringSymbolMapping(parentSyntax, out symbolMetadata);
 
 			return isValidSourceSymbol 
-				? new SymbolSyntaxElement(identifierToken, symbolMetadata.Id) 
+				? new SymbolSyntaxElement(identifierToken, symbolMetadata) 
 				: new SyntaxElementWithTrivia(identifierToken, SyntaxElementKind.Litteral);
 		}
 

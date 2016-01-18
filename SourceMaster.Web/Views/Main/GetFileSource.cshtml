@@ -1,0 +1,91 @@
+﻿@using Microsoft.CodeAnalysis
+@using SourceMaster.Output
+@using SourceMaster.Syntax
+@model SourceMaster.Web.Models.FileSourceViewModel
+
+@{
+	ViewBag.Title = "FileBrowser";
+}
+
+<h2>FileBrowser</h2>
+
+<div>
+	<table>
+		<tbody>
+		<tr>
+			<td style="vertical-align: top; padding-right: 21px">
+				<div>
+					@foreach (var kvp in Model.CurrentDirectoryFileNamesToPaths)
+					{
+						<div>
+							<a href="@TranformToProjectRelativePath(kvp.Value)">@kvp.Key</a>
+						</div>
+					}
+				</div>
+			</td>
+			<td style="width: 100%">
+				<pre>
+					@foreach (var element in Model.Content.Elements)
+					{
+						@Html.Raw(ParseElementAsHtml(element))
+					}
+					</pre>
+			</td>
+		</tr>
+		</tbody>
+	</table>
+	<pre>
+	</pre>
+</div>
+
+@functions
+{
+	IHtmlString ParseElementAsHtml(SyntaxElement element)
+	{
+		switch (element.Kind)
+		{
+			case SyntaxElementKind.Keyword:
+				return Html.Raw(CreateKeyword(element));
+			case SyntaxElementKind.Identifier:
+				return ProcessIdentifierElement(element as SymbolSyntaxElement);
+			case SyntaxElementKind.Trivia:
+				return ProcessTriviaElement(element as TriviaSyntaxElement);
+			case SyntaxElementKind.Litteral:
+			default:
+				return @Html.Raw(element.Text);
+		}
+	}
+
+	IHtmlString ProcessIdentifierElement(SymbolSyntaxElement symbolElement)
+	{
+		var className = symbolElement.SymbolKind == SymbolKind.NamedType ? "class-identifier" : null;
+		return @Html.Raw(CreateIdentifier(symbolElement, className));
+	}
+
+	IHtmlString ProcessTriviaElement(TriviaSyntaxElement triviaElement)
+	{
+		switch (triviaElement.TriviaKind)
+		{
+			case TriviaSyntaxElementKind.Comment:
+				return @Html.Raw(CreateCommentSpan(triviaElement));
+			default:
+				return @Html.Raw(triviaElement.Text);
+		}
+	}
+
+	string TranformToProjectRelativePath(string path)
+	{
+		return path
+			.Replace('\\', '/')
+			.TrimStart('/')
+			.Insert(0, "/");
+	}
+}
+
+
+
+@helper CreateKeyword(SyntaxElement element) {<b>@element.Text</b>}
+
+@helper CreateCommentSpan(TriviaSyntaxElement triviaElement) {<span class="comment">@triviaElement.Text</span>}
+
+@helper CreateIdentifier(SymbolSyntaxElement symbolElement, string className) {<a class="@className">@symbolElement.Text</a>}
